@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+*.iml
+
+# Node modules (will be rebuilt in Docker)
+frontend/node_modules
+
+# Maven target (will be rebuilt in Docker)
+target
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude config
+.claude
+
+# Documentation (not needed in runtime)
+CLAUDE.md
+README.md
