@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 -- 知识库助手数据库初始化脚本
 
 CREATE DATABASE IF NOT EXISTS knowledge_db
