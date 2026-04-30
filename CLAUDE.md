@@ -115,22 +115,103 @@ URL 导入 → Jsoup/GitHub API 抓取 → 文本分块 → 向量化 → 存入
 - `GET /api/chat/sessions/{id}/messages` - 消息历史
 - `DELETE /api/chat/sessions/{id}` - 删除会话
 
-## 开发环境要求
+## 环境要求
 
 - JDK 21 + Node.js 18+
-- Docker（MySQL 8.x + Qdrant + Redis）
-- DeepSeek API Key（Chat 模型）
-- SiliconFlow API Key（Embedding 模型，BAAI/bge-large-zh-v1.5）
+- Docker Desktop（运行 MySQL、Qdrant、Redis）
+- DeepSeek API Key（Chat 模型）— https://platform.deepseek.com
+- SiliconFlow API Key（Embedding 模型）— https://siliconflow.cn
 
-## 本地启动步骤
+## 快速启动
 
-1. `docker compose up -d` 启动 MySQL、Qdrant、Redis
-2. 执行 `init/schema.sql` 创建数据库表
-3. 复制 `.env.example` 为 `.env`，填入真实 API Key
-4. IDEA 配置 Run Configuration 加载 `.env`（EnvFile 插件或手动设置环境变量）
-5. IDEA 启动 `AssistantApplication`
-6. `cd frontend && npm run dev` 启动前端开发服务器
-7. 访问 http://localhost:5173
+### 1. 启动中间件
+
+```bash
+docker compose up -d
+```
+
+这会启动三个服务：
+- MySQL 8.x（端口 3307，用户名 root）
+- Qdrant 向量数据库（端口 6333/6334）
+- Redis 7.x（端口 6379）
+
+首次启动需要等待约 30 秒让 MySQL 初始化。
+
+### 2. 初始化数据库
+
+```bash
+docker exec -i knowledge-mysql mysql -uroot -pSZc+04.25 --default-character-set=utf8mb4 knowledge_db < init/schema.sql
+```
+
+### 3. 配置环境变量
+
+复制模板并填入你的 API Key：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env`，填入以下真实值：
+
+| 变量 | 获取方式 |
+|------|---------|
+| `DEEPSEEK_API_KEY` | DeepSeek 开放平台 → API Keys |
+| `SILICONFLOW_API_KEY` | SiliconFlow → API Keys |
+| `MYSQL_ROOT_PASSWORD` | 自定义 MySQL 密码（默认 SZc+04.25） |
+| `APP_PASSWORD` | 前端登录密码（默认 admin123） |
+
+### 4. 启动后端
+
+**方式一：IDEA（推荐，支持断点调试）**
+
+1. 打开 IDEA → Run → Edit Configurations → AssistantApplication
+2. Modify options → 勾选 Environment variables
+3. 粘贴 `.env` 文件中的内容，格式：`KEY1=VAL1;KEY2=VAL2`
+4. 或安装 EnvFile 插件，直接勾选 `.env` 文件
+5. 点击运行
+
+**方式二：命令行**
+
+```bash
+# 加载 .env 并启动
+export $(cat .env | xargs) && ./mvnw spring-boot:run
+```
+
+后端启动成功后控制台显示 `Started AssistantApplication`，运行在 http://localhost:8080
+
+### 5. 启动前端
+
+```bash
+cd frontend
+npm install   # 首次需要安装依赖
+npm run dev   # 启动开发服务器
+```
+
+访问 http://localhost:5173，输入密码（默认 admin123）即可使用。
+
+### 6. 功能使用
+
+- **首页**：查看文档总数、分类数量、对话次数统计
+- **文档管理**：左侧分类列表，右侧文档列表。支持上传文件（PDF/Word/Markdown）、导入链接、新建文档
+- **AI 问答**：基于知识库的智能问答，自动检索相关文档并生成回答
+
+## 常用命令
+
+```bash
+# 查看中间件状态
+docker compose ps
+
+# 查看 MySQL 数据
+docker exec knowledge-mysql mysql -uroot -pSZc+04.25 --default-character-set=utf8mb4 \
+  -e "SELECT id, name FROM knowledge_db.category; SELECT COUNT(*) FROM knowledge_db.document;"
+
+# 重建数据库（清空所有数据）
+docker compose down && docker volume rm assistant_mysql_data assistant_qdrant_data && docker compose up -d
+# 等待 30 秒后重新执行步骤 2
+
+# 构建前端产物到 static/（用于 IDEA 直接启动后端访问前端）
+cd frontend && npm run build
+```
 
 ## 配置项
 
@@ -152,22 +233,7 @@ URL 导入 → Jsoup/GitHub API 抓取 → 文本分块 → 向量化 → 存入
 - [x] Phase 2: 核心功能开发（AI 问答 RAG、文件上传解析、向量检索）
 - [x] Phase 3: 知识库重构（分类改为用户自定义、URL 导入、左右布局）
 - [x] Phase 4: Vue 3 + Element Plus 前端重构
-  - Thymeleaf → Vue SPA（Vite 构建）
-  - 侧边栏导航布局、密码保护登录页、首页统计仪表盘
 - [x] Phase 4.5: 前端优化与功能完善
-  - 文档列表"全部"分类选项、文档分类修改功能
-  - 前端布局优化（卡片阴影、hover 效果、间距统一）
-  - 时间戳格式化修复、文档数统计修复（MyBatis-Plus 分页插件）
 - [x] Phase 4.6: Redis 缓存与接口限流
-  - Redis 7.x 缓存（Spring Cache + RedisTemplate）
-  - 分类列表缓存（@Cacheable / @CacheEvict）
-  - 滑动窗口限流（Lua 脚本 + Redis ZSET）
-  - AI 问答限流 10次/60秒、URL 导入限流 5次/60秒
-- [x] Phase 4.7: Docker 规范化
-  - 多阶段 Dockerfile（Node.js 构建 Vue + Maven 构建 Java）
-  - .env 敏感信息管理、.env.example 模板
-  - docker-compose 完整编排 + bridge 网络
-  - application.yml 环境变量引用（无硬编码密钥）
-- [ ] Phase 5: 服务器部署
-  - 宝塔面板 + Docker 环境
-  - 待解决：服务器 DNS 导致构建失败，App 容器网络连通性问题
+- [x] Phase 4.7: Docker 规范化（Dockerfile、.env、docker-compose 编排）
+- [ ] Phase 5: 服务器部署（待后续开发）
