@@ -10,10 +10,6 @@
         <div v-for="(msg, idx) in messages" :key="idx" :class="['message', msg.role]">
           <div v-if="msg.role === 'assistant'" class="avatar ai-avatar">AI</div>
           <div class="message-bubble">
-            <div v-if="msg.role === 'assistant' && msg.docCount" class="doc-count">
-              <el-icon><Document /></el-icon>
-              引用了 {{ msg.docCount }} 个相关文档
-            </div>
             <div class="message-content">{{ msg.content }}</div>
           </div>
           <div v-if="msg.role === 'user'" class="avatar user-avatar">我</div>
@@ -47,7 +43,7 @@
 
 <script setup>
 import { ref, nextTick } from 'vue'
-import { Loading, Document } from '@element-plus/icons-vue'
+import { Loading } from '@element-plus/icons-vue'
 import api from '../api'
 
 const question = ref('')
@@ -70,8 +66,7 @@ async function sendQuestion() {
     sessionId.value = res.data.sessionId
     messages.value.push({
       role: 'assistant',
-      content: res.data.answer,
-      docCount: res.data.relevantDocCount
+      content: res.data.answer
     })
   } catch (e) {
     messages.value.push({ role: 'assistant', content: '请求失败，请检查服务是否正常运行' })
@@ -179,14 +174,6 @@ function scrollToBottom() {
   align-items: center;
   gap: 8px;
   color: #999;
-}
-.doc-count {
-  font-size: 12px;
-  color: #409eff;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 .message-content {
   white-space: pre-wrap;

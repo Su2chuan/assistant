@@ -89,6 +89,7 @@ public class ChatServiceImpl implements ChatService {
                     SearchRequest.builder()
                             .query(request.getQuestion())
                             .topK(5)
+                            .similarityThreshold(0.5)
                             .build()
             );
         } catch (Exception e) {
